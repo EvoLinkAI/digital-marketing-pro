@@ -22,6 +22,7 @@ Plugins are **tool-agnostic** — they describe workflows in terms of categories
 | Payments | `~~payments` | Stripe | — |
 | Project management | `~~project management` | Asana | Linear, Jira, Monday.com |
 | CMS | `~~CMS` | Webflow | WordPress, HubSpot CMS |
+| Image/video generation | `~~creative generation` | EvoLink | fal.ai, Replicate |
 
 ## Platform-level integrations
 

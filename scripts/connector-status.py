@@ -30,6 +30,7 @@ MCP_EXAMPLE = PLUGIN_ROOT / ".mcp.json.example"
 # Every connector the plugin knows about, grouped by category.
 # "http" = available as HTTP connector (works in Cowork + Claude Code)
 # "npx"  = requires local npx server (Claude Code only)
+# "openai-compatible" = provider profile with API key + base URL env vars
 
 CONNECTOR_REGISTRY = {
     "chat": {
@@ -537,6 +538,22 @@ CONNECTOR_REGISTRY = {
             },
         },
     },
+    "image-video-generation": {
+        "description": "AI image, video, and audio generation providers",
+        "connectors": {
+            "evolink": {
+                "transport": "openai-compatible",
+                "description": "EvoLink — OpenAI-compatible creative model gateway",
+                "env_vars": ["EVOLINK_API_KEY", "EVOLINK_BASE_URL"],
+                "api_key_env_var": "EVOLINK_API_KEY",
+                "base_url_env_var": "EVOLINK_BASE_URL",
+                "skills_unlocked": [
+                    "ad-creative", "content-engine", "social-strategy",
+                    "creative-testing-framework",
+                ],
+            },
+        },
+    },
     "productivity": {
         "description": "Document storage, spreadsheets, and collaboration",
         "connectors": {
@@ -656,8 +673,8 @@ def _is_configured(name, connector_info, active_servers):
     # HTTP connectors in .mcp.json
     if name in active_servers:
         return True
-    # Check env vars for npx connectors
-    if connector_info["transport"] == "npx" and connector_info.get("env_vars"):
+    # Check env vars for local/package and OpenAI-compatible provider connectors
+    if connector_info["transport"] in {"npx", "openai-compatible"} and connector_info.get("env_vars"):
         return all(os.environ.get(v) for v in connector_info["env_vars"])
     return False
 
@@ -689,9 +706,12 @@ def status_dashboard():
                 total_connected += 1
             else:
                 entry["status"] = "available"
-                if conn["transport"] == "npx":
+                if conn["transport"] in {"npx", "openai-compatible"}:
                     entry["env_vars_needed"] = conn["env_vars"]
-                    entry["note"] = "Claude Code only (requires npx)"
+                    if conn["transport"] == "npx":
+                        entry["note"] = "Claude Code only (requires npx)"
+                    else:
+                        entry["note"] = "OpenAI-compatible provider — requires API key and base URL"
                 else:
                     entry["note"] = "HTTP connector — works in Cowork + Claude Code"
                 if "note" in conn:
@@ -734,7 +754,7 @@ def list_available():
                     "transport": conn["transport"],
                     "skills_unlocked": conn["skills_unlocked"],
                 }
-                if conn["transport"] == "npx":
+                if conn["transport"] in {"npx", "openai-compatible"}:
                     entry["env_vars_needed"] = conn["env_vars"]
                 available.append(entry)
 
@@ -762,6 +782,20 @@ def check_connector(name):
             if conn["transport"] == "http":
                 result["url"] = conn.get("url", "")
                 result["setup"] = "HTTP connector — auto-connects via OAuth when you first use it"
+            elif conn["transport"] == "openai-compatible":
+                result["env_vars"] = conn.get("env_vars", [])
+                result["base_url_env_var"] = conn.get("base_url_env_var", "")
+                result["api_key_env_var"] = conn.get("api_key_env_var", "")
+                if not configured:
+                    env_status = {}
+                    for v in conn.get("env_vars", []):
+                        env_status[v] = "set" if os.environ.get(v) else "missing"
+                    result["env_var_status"] = env_status
+                result["setup"] = (
+                    "OpenAI-compatible provider. Set EVOLINK_API_KEY and "
+                    "EVOLINK_BASE_URL, then use an MCP adapter or platform "
+                    "connector that accepts an OpenAI-compatible base URL."
+                )
             else:
                 result["package"] = conn.get("package", "")
                 result["env_vars"] = conn.get("env_vars", [])
@@ -812,6 +846,25 @@ def setup_guide(name):
                         f"{name} is configured. Use any of these skills to activate it: "
                         + ", ".join(f"/dm:{s}" for s in conn["skills_unlocked"])
                     )
+            elif conn["transport"] == "openai-compatible":
+                guide["transport"] = "openai-compatible"
+                guide["env_vars"] = conn.get("env_vars", [])
+                guide["steps"] = [
+                    "1. Set EVOLINK_API_KEY to your EvoLink API key.",
+                    "2. Set EVOLINK_BASE_URL to your EvoLink OpenAI-compatible API base URL.",
+                    "3. Configure an MCP adapter or platform connector that supports OpenAI-compatible base URLs.",
+                    "4. Use the creative skills listed below and select EvoLink-backed models in that adapter.",
+                ]
+                guide["provider_profile"] = {
+                    "name": name,
+                    "api_key": "${EVOLINK_API_KEY}",
+                    "base_url": "${EVOLINK_BASE_URL}",
+                    "api_format": "openai-compatible",
+                }
+                guide["notes"] = [
+                    "API keys are read from environment variables and never stored in plugin files.",
+                    "Keep EVOLINK_BASE_URL environment-specific instead of hardcoding a tenant endpoint.",
+                ]
             else:
                 guide["transport"] = "npx"
                 guide["package"] = conn.get("package", "")

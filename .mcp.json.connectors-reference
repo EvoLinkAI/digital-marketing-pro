@@ -187,6 +187,12 @@
       "_auth": "REPLICATE_API_TOKEN env var (free Replicate account required)",
       "_purpose": "Image/video generation — 1000+ models. Equivalent multi-provider coverage to fal-ai."
     },
+    "evolink": {
+      "type": "openai-compatible",
+      "url": "${EVOLINK_BASE_URL}",
+      "_auth": "Authorization: Bearer $EVOLINK_API_KEY",
+      "_purpose": "EvoLink creative model gateway through an OpenAI-compatible API base URL. Use for teams that already route image, video, or audio generation through EvoLink and want the plugin's creative workflows to target the same provider."
+    },
 
     "_section_unified_ads_mcps": "Purpose-built ads-platform MCPs that unify multiple ad platforms under a single endpoint. Choose ONE — overlap creates duplicate tools. As of May 2026 these are the maturing options; the generic pipedream-* / composio-* entries above remain a valid fallback if you prefer single-vendor ads exposure or want every other SaaS in the same gateway. Endpoint URLs and platform-coverage claims below were verified May 2026 — re-verify before production use as these are early-stage services.",
     "synter-media-ai": {
